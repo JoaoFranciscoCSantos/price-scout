@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "name": "Exemplo: RTX 4070",
+      "sites": [
+        {
+          "site": "loja-exemplo-a",
+          "url": "https://loja-a.example.com/produto/123",
+          "type": "scraper",
+          "price_selector": ".price-current"
+        },
+        {
+          "site": "loja-exemplo-b",
+          "url": "https://loja-b.example.com/produto/456",
+          "type": "scraper",
+          "price_selector": "#product-price"
+        }
+      ]
+    }
+  ]
+}
