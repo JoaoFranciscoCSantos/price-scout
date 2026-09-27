@@ -35,9 +35,31 @@ price-scout/
 - **Histórico:** guarda todas as leituras de preço ao longo do tempo (tabela `price_history`), não só o valor mais recente
 - **Configuração de items:** ficheiro `items.json`, editável à mão; um comando `--add` no terminal poderá ser adicionado mais tarde sem mudar este formato
 
+## Como correr
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+Isto lê o `items.json`, verifica o preço de cada item em cada site configurado,
+grava o resultado no histórico (`price_scout.db`, criado automaticamente) e
+mostra no terminal o site mais barato para cada item.
+
+## Configurar os teus próprios items
+
+Edita o `items.json` e substitui os exemplos pelos teus items reais. Para cada
+site com `"type": "scraper"`, precisas de indicar o `price_selector`: o
+seletor CSS do elemento onde o preço aparece na página. Para o encontrar:
+
+1. Abre a página do produto no browser
+2. Inspeciona o elemento com o preço (botão direito → Inspecionar)
+3. Usa a classe ou id desse elemento como seletor (ex: `.price-current`, `#product-price`)
+
 ## Estado atual
 
-Projeto em fase de scaffolding — ainda sem código funcional. Próximo passo: modelo de dados (`models.py` + `database.py`).
+Funcional de ponta a ponta com parsers de scraping genérico. Ainda por fazer:
+suporte a sites com API oficial, e testar seletores CSS contra sites reais.
 
 ## Roadmap futuro
 
