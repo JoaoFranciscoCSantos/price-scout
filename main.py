@@ -11,9 +11,12 @@ Uso:
 import json
 from pathlib import Path
 
+import os
+
 from database import add_price_entry, get_connection, get_latest_prices, get_or_create_item
 from models import PriceEntry
 from sites.base import PriceFetchError, SiteParser
+from sites.ebay_api import EbayApiParser
 from sites.generic_scraper import GenericScraperParser
 
 CONFIG_PATH = Path(__file__).parent / "items.json"
@@ -29,9 +32,18 @@ def build_parser(site_config: dict) -> SiteParser:
             price_selector=site_config["price_selector"],
         )
 
-    # Espaço reservado para quando adicionarmos parsers de API oficial:
-    # if site_type == "api":
-    #     return SomeApiParser(...)
+    if site_type == "api" and site_config.get("api") == "ebay":
+        client_id = os.environ.get("EBAY_CLIENT_ID")
+        client_secret = os.environ.get("EBAY_CLIENT_SECRET")
+        if not client_id or not client_secret:
+            raise PriceFetchError(
+                "Faltam as variáveis de ambiente EBAY_CLIENT_ID / EBAY_CLIENT_SECRET"
+            )
+        return EbayApiParser(client_id=client_id, client_secret=client_secret)
+
+    # Espaço reservado para futuras APIs (AliExpress Affiliate API, etc.):
+    # if site_type == "api" and site_config.get("api") == "aliexpress":
+    #     return AliExpressApiParser(...)
 
     raise ValueError(f"Tipo de site desconhecido: {site_type!r}")
 
@@ -47,10 +59,10 @@ def track_item(conn, item_config: dict) -> None:
     print(f"\n{item.name}")
 
     for site_config in item_config["sites"]:
-        parser = build_parser(site_config)
         url = site_config["url"]
 
         try:
+            parser = build_parser(site_config)
             price = parser.get_price(url)
         except PriceFetchError as exc:
             print(f"  [!] {site_config['site']}: falhou ({exc})")
