@@ -1,19 +1,25 @@
 {
+  "exchange_rates": {
+    "GBP": 1.15,
+    "USD": 0.92
+  },
   "items": [
     {
-      "name": "Exemplo: RTX 4070",
+      "name": "Livro de teste",
       "sites": [
         {
-          "site": "loja-exemplo-a",
-          "url": "https://loja-a.example.com/produto/123",
+          "site": "books-to-scrape",
+          "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
           "type": "scraper",
-          "price_selector": ".price-current"
+          "price_selector": "p.price_color",
+          "currency": "GBP"
         },
         {
-          "site": "loja-exemplo-b",
-          "url": "https://loja-b.example.com/produto/456",
+          "site": "libristo",
+          "url": "https://www.libristo.pt/pt/livro/the-psychology-of-money-timeless-lessons-on-wealth-greed-and-happiness_25691279",
           "type": "scraper",
-          "price_selector": "#product-price"
+          "price_selector": "p.text-5xl",
+          "currency": "EUR"
         }
       ]
     }

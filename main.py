@@ -2,16 +2,15 @@
 
 Lê `items.json`, corre o parser correto para cada site de cada item,
 grava cada leitura no histórico (SQLite) e no fim mostra um resumo
-com o site mais barato por item.
+com o site mais barato por item (comparado em EUR).
 
 Uso:
     python main.py
 """
 
 import json
-from pathlib import Path
-
 import os
+from pathlib import Path
 
 from database import add_price_entry, get_connection, get_latest_prices, get_or_create_item
 from models import PriceEntry
@@ -30,6 +29,7 @@ def build_parser(site_config: dict) -> SiteParser:
         return GenericScraperParser(
             name=site_config["site"],
             price_selector=site_config["price_selector"],
+            currency=site_config.get("currency"),  # opcional; senão deteta pelo texto
         )
 
     if site_type == "api" and site_config.get("api") == "ebay":
@@ -53,6 +53,14 @@ def load_config(path: Path = CONFIG_PATH) -> dict:
         return json.load(f)
 
 
+def to_eur(amount: float, currency: str, rates: dict) -> float | None:
+    """Converte para EUR com as taxas do items.json. Devolve None se não houver taxa."""
+    if currency == "EUR":
+        return amount
+    rate = rates.get(currency)
+    return amount * rate if rate is not None else None
+
+
 def track_item(conn, item_config: dict) -> None:
     """Corre todos os sites configurados para um item e grava os preços."""
     item = get_or_create_item(conn, item_config["name"])
@@ -68,28 +76,53 @@ def track_item(conn, item_config: dict) -> None:
             print(f"  [!] {site_config['site']}: falhou ({exc})")
             continue
 
-        add_price_entry(conn, PriceEntry(item_id=item.id, site=site_config["site"], price=price, url=url))
-        print(f"  {site_config['site']}: {price:.2f}€")
+        add_price_entry(
+            conn,
+            PriceEntry(
+                item_id=item.id,
+                site=site_config["site"],
+                price=price.amount,
+                currency=price.currency,
+                url=url,
+            ),
+        )
+        print(f"  {site_config['site']}: {price.amount:.2f} {price.currency}")
 
 
-def print_summary(conn, item_config: dict) -> None:
-    """Mostra o site mais barato atual para este item."""
+def print_summary(conn, item_config: dict, rates: dict) -> None:
+    """Mostra o site mais barato atual para este item, comparado em EUR."""
     item = get_or_create_item(conn, item_config["name"])
     rows = get_latest_prices(conn, item.id)
-    if not rows:
+
+    comparable = []
+    for row in rows:
+        eur = to_eur(row["price"], row["currency"], rates)
+        if eur is None:
+            print(f"  [!] {row['site']}: sem taxa de câmbio para {row['currency']}, ignorado na comparação")
+            continue
+        comparable.append((eur, row))
+
+    if not comparable:
         return
 
-    best = rows[0]
-    print(f"  -> Mais barato: {best['site']} a {best['price']:.2f}€")
+    eur, best = min(comparable, key=lambda pair: pair[0])
+    if best["currency"] == "EUR":
+        print(f"  -> Mais barato: {best['site']} a {eur:.2f} EUR")
+    else:
+        print(
+            f"  -> Mais barato: {best['site']} a {best['price']:.2f} {best['currency']} "
+            f"(≈ {eur:.2f} EUR)"
+        )
 
 
 def main() -> None:
     config = load_config()
+    rates = config.get("exchange_rates", {})
     conn = get_connection()
 
     for item_config in config["items"]:
         track_item(conn, item_config)
-        print_summary(conn, item_config)
+        print_summary(conn, item_config, rates)
 
 
 if __name__ == "__main__":
